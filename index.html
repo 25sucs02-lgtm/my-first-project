@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Dodge</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#20144b,#080b18 65%);color:#f4f7ff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;padding:20px}.app{width:min(800px,100%)}h1{text-align:center;color:#55f6ff;letter-spacing:5px;text-shadow:0 0 18px #00d9ff;margin:0 0 8px}.sub{text-align:center;color:#aab4d6;margin:0 0 18px}.hud{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px}.panel{background:#141a30;border:1px solid #343d64;border-radius:10px;padding:12px 16px;flex:1}.panel small{display:block;color:#9ca8d0;margin-bottom:5px}.panel strong{font-size:22px;color:#55f6ff}canvas{width:100%;display:block;background:#090e20;border:1px solid #37436d;border-radius:12px;box-shadow:0 0 30px #241a6b;touch-action:pan-y}.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:9px;padding:12px 18px;background:#55f6ff;color:#07101d;font-weight:bold;cursor:pointer}button:hover{filter:brightness(1.12)}.move{background:#242e50;color:white;border:1px solid #46547f;min-width:70px}.help{text-align:center;color:#aab4d6;font-size:13px;line-height:1.7;margin-top:14px}.footer{text-align:center;color:#657197;font-size:12px;margin-top:16px}
+</style>
+</head>
+<body>
+<main class="app">
+<h1>NEON DODGE</h1><p class="sub">Dodge the danger. Beat your high score.</p>
+<div class="hud"><div class="panel"><small>SCORE</small><strong id="score">0</strong></div><div class="panel"><small>BEST</small><strong id="best">0</strong></div><div class="panel"><small>STATUS</small><strong id="status" style="font-size:16px">READY</strong></div></div>
+<canvas id="game" width="800" height="480" aria-label="Neon Dodge game"></canvas>
+<div class="actions"><button class="move" id="left" aria-label="Move left">◀ LEFT</button><button id="start">▶ START GAME</button><button class="move" id="right" aria-label="Move right">RIGHT ▶</button></div>
+<p class="help">Move: ← → or A / D &nbsp; • &nbsp; Avoid the red blocks!<br>On mobile, hold the LEFT and RIGHT buttons.</p><p class="footer">MADE WITH HTML · CSS · JAVASCRIPT</p>
+</main>
+<script>
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),statusEl=document.getElementById("status"),startBtn=document.getElementById("start");
+let player,obstacles,particles,score,best=0,running=false,over=false,last=0,spawn=0,keys={left:false,right:false},animationId=0;
+try{best=Number(localStorage.getItem("neonDodgeBest"))||0}catch(e){}bestEl.textContent=best;
+function reset(){player={x:380,y:420,w:40,h:28,speed:390};obstacles=[];particles=[];score=0;spawn=0;last=0;over=false;scoreEl.textContent="0";statusEl.textContent="PLAYING";startBtn.textContent="↻ RESTART";}
+function start(){cancelAnimationFrame(animationId);reset();running=true;draw();animationId=requestAnimationFrame(loop)}
+function end(){running=false;over=true;statusEl.textContent="GAME OVER";startBtn.textContent="↻ PLAY AGAIN";for(let i=0;i<24;i++)particles.push({x:player.x+player.w/2,y:player.y+player.h/2,vx:(Math.random()-.5)*280,vy:(Math.random()-.5)*280,life:1});draw();}
+function rectHit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function loop(time){if(!running)return;const dt=Math.min((time-last)/1000||0,.033);last=time;update(dt);draw();if(running)animationId=requestAnimationFrame(loop)}
+function update(dt){if(keys.left)player.x-=player.speed*dt;if(keys.right)player.x+=player.speed*dt;player.x=Math.max(8,Math.min(canvas.width-player.w-8,player.x));score+=dt*10;scoreEl.textContent=Math.floor(score);spawn+=dt;const interval=Math.max(.28,.85-score/650);if(spawn>=interval){spawn=0;const w=28+Math.random()*42;obstacles.push({x:10+Math.random()*(canvas.width-w-20),y:-45,w,h:20+Math.random()*24,speed:155+Math.random()*75+score*.35});}for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.y+=o.speed*dt;if(rectHit(player,o)){end();return}if(o.y>canvas.height)obstacles.splice(i,1)}for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;if(p.life<=0)particles.splice(i,1)}}
+function draw(){ctx.clearRect(0,0,800,480);const g=ctx.createLinearGradient(0,0,800,480);g.addColorStop(0,"#0d1633");g.addColorStop(1,"#100b27");ctx.fillStyle=g;ctx.fillRect(0,0,800,480);ctx.strokeStyle="rgba(80,120,210,.12)";ctx.lineWidth=1;for(let x=0;x<800;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,480);ctx.stroke()}for(let y=0;y<480;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke()}for(let i=0;i<55;i++){const x=(i*137)%800,y=(i*71)%480;ctx.fillStyle="rgba(160,190,255,.5)";ctx.fillRect(x,y,2,2)}for(const o of obstacles){ctx.shadowBlur=18;ctx.shadowColor="#ff315e";ctx.fillStyle="#ff315e";ctx.fillRect(o.x,o.y,o.w,o.h);ctx.shadowBlur=0;ctx.strokeStyle="#ff9bb0";ctx.strokeRect(o.x,o.y,o.w,o.h)}if(player){ctx.save();ctx.shadowBlur=24;ctx.shadowColor="#45f6ff";ctx.fillStyle="#55f6ff";ctx.beginPath();ctx.moveTo(player.x+player.w/2,player.y-7);ctx.lineTo(player.x+player.w,player.y+player.h);ctx.lineTo(player.x+player.w/2,player.y+player.h-7);ctx.lineTo(player.x,player.y+player.h);ctx.closePath();ctx.fill();ctx.restore()}for(const p of particles){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle="#ff5379";ctx.fillRect(p.x,p.y,5,5)}ctx.globalAlpha=1;if(!running){ctx.fillStyle="rgba(4,7,20,.68)";ctx.fillRect(0,0,800,480);ctx.textAlign="center";ctx.fillStyle="#55f6ff";ctx.font="bold 38px Arial";ctx.fillText(over?"GAME OVER":"READY PLAYER ONE?",400,210);ctx.fillStyle="#f3f5ff";ctx.font="20px Arial";ctx.fillText(over?"Score: "+Math.floor(score):"Press START to begin",400,253);ctx.font="15px Arial";ctx.fillStyle="#aab4d6";ctx.fillText(over?"Try again and beat your best!":"Dodge every red obstacle",400,285)}}
+function moveButton(id,dir){const b=document.getElementById(id);b.addEventListener("pointerdown",e=>{e.preventDefault();keys[dir]=true;b.setPointerCapture(e.pointerId)});for(const ev of ["pointerup","pointercancel","lostpointercapture"])b.addEventListener(ev,()=>keys[dir]=false)}
+moveButton("left","left");moveButton("right","right");window.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","a","A","d","D"," "].includes(e.key))e.preventDefault();if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A")keys.left=true;if(e.key==="ArrowRight"||e.key==="d"||e.key==="D")keys.right=true;if(e.key===" "&&!running)start()});window.addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))keys.left=false;if(["ArrowRight","d","D"].includes(e.key))keys.right=false});window.addEventListener("blur",()=>{keys.left=false;keys.right=false});startBtn.addEventListener("click",start);
+const originalEnd=end;end=function(){originalEnd();if(Math.floor(score)>best){best=Math.floor(score);bestEl.textContent=best;try{localStorage.setItem("neonDodgeBest",best)}catch(e){}}};player={x:380,y:420,w:40,h:28,speed:390};obstacles=[];particles=[];score=0;draw();
+</script>
+</body>
+</html>
